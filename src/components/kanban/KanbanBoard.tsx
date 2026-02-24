@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { DragDropContext, type DropResult } from "@hello-pangea/dnd";
-import { Plus, Save, Loader2 } from "lucide-react";
+import { Plus, Loader2, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import type { Task, Status, Priority } from "@/types/kanban";
 import { COLUMN_CONFIG } from "@/types/kanban";
 import { KanbanColumn } from "./KanbanColumn";
@@ -10,10 +11,10 @@ import { AddTaskDialog } from "./AddTaskDialog";
 import { Button } from "@/components/ui/button";
 
 export function KanbanBoard() {
+  const { user, signOut } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogStatus, setDialogStatus] = useState<Status>("todo");
-  const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Load tasks from DB
@@ -52,7 +53,7 @@ export function KanbanBoard() {
 
     const { data, error } = await supabase
       .from("tasks")
-      .insert({ ...taskData, position })
+      .insert({ ...taskData, position, user_id: user?.id })
       .select()
       .single();
 
@@ -145,6 +146,15 @@ export function KanbanBoard() {
           >
             <Plus className="w-4 h-4" />
             New Task
+          </Button>
+          <Button
+            onClick={signOut}
+            variant="ghost"
+            size="sm"
+            className="gap-1.5 text-muted-foreground"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign out
           </Button>
         </div>
       </div>

@@ -1,0 +1,1 @@
+DROP POLICY "Allow all access to tasks" ON public.tasks;
