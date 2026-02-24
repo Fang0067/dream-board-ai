@@ -11,19 +11,23 @@ import { AddTaskDialog } from "./AddTaskDialog";
 import { Button } from "@/components/ui/button";
 
 export function KanbanBoard() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading: authLoading } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogStatus, setDialogStatus] = useState<Status>("todo");
   const [loading, setLoading] = useState(true);
 
-  // Load tasks from DB
+  // Load tasks from DB (user-scoped via RLS)
   useEffect(() => {
+    if (!user?.id) return;
+
     const loadTasks = async () => {
+      setLoading(true);
       const { data, error } = await supabase
         .from("tasks")
         .select("*")
         .order("position", { ascending: true });
+
       if (error) {
         console.error("Error loading tasks:", error);
         toast.error("Failed to load tasks");
@@ -32,8 +36,9 @@ export function KanbanBoard() {
       }
       setLoading(false);
     };
+
     loadTasks();
-  }, []);
+  }, [user?.id]);
 
   const openAddDialog = (status: Status) => {
     setDialogStatus(status);
@@ -48,12 +53,17 @@ export function KanbanBoard() {
     assignee: string;
     due_date: string | null;
   }) => {
+    if (!user?.id) {
+      toast.error("Please sign in to add tasks");
+      return;
+    }
+
     const columnTasks = tasks.filter((t) => t.status === taskData.status);
     const position = columnTasks.length;
 
     const { data, error } = await supabase
       .from("tasks")
-      .insert({ ...taskData, position, user_id: user?.id })
+      .insert({ ...taskData, position, user_id: user.id })
       .select()
       .single();
 
@@ -120,7 +130,7 @@ export function KanbanBoard() {
   const getColumnTasks = (status: Status) =>
     tasks.filter((t) => t.status === status).sort((a, b) => a.position - b.position);
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="w-6 h-6 animate-spin text-primary" />
